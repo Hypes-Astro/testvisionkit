@@ -5,6 +5,18 @@ struct PoseOverlayView: View {
     let points: [VNHumanBodyPoseObservation.JointName: VNRecognizedPoint]
     let evaluationColor: Color
 
+//    let jointPairs: [(VNHumanBodyPoseObservation.JointName, VNHumanBodyPoseObservation.JointName)] = [
+//        (.leftShoulder, .leftElbow),
+//        (.leftElbow, .leftWrist),
+//        (.rightShoulder, .rightElbow),
+//        (.rightElbow, .rightWrist),
+//        (.leftShoulder, .rightShoulder),
+//        (.leftHip, .rightHip),
+//        (.leftShoulder, .leftHip),
+//        (.rightShoulder, .rightHip)
+//    ]
+    
+    
     let jointPairs: [(VNHumanBodyPoseObservation.JointName, VNHumanBodyPoseObservation.JointName)] = [
         (.leftShoulder, .leftElbow),
         (.leftElbow, .leftWrist),
@@ -13,8 +25,13 @@ struct PoseOverlayView: View {
         (.leftShoulder, .rightShoulder),
         (.leftHip, .rightHip),
         (.leftShoulder, .leftHip),
-        (.rightShoulder, .rightHip)
+        (.rightShoulder, .rightHip),
+        (.leftHip, .leftKnee),
+        (.leftKnee, .leftAnkle),
+        (.rightHip, .rightKnee),
+        (.rightKnee, .rightAnkle)
     ]
+
 
     var body: some View {
         GeometryReader { geometry in

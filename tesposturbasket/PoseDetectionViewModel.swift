@@ -65,40 +65,100 @@ class PoseDetectionViewModel: NSObject, ObservableObject {
     private func evaluatePose(points: [VNHumanBodyPoseObservation.JointName: VNRecognizedPoint]) {
         DispatchQueue.main.async {
             self.currentPoints = points
-            
-            guard let leftElbow = points[.leftElbow],
-                  let leftShoulder = points[.leftShoulder],
-                  let leftWrist = points[.leftWrist],
-                  leftElbow.confidence > 0.5,
-                  leftShoulder.confidence > 0.5,
-                  leftWrist.confidence > 0.5 else {
-                self.feedbackText = "Pose tidak jelas"
-                self.overlayColor = .gray
-                return
-            }
-            
-            // Konversi lokasi Vision (0,0 kiri bawah) ke coordinate SwiftUI (0,0 kiri atas) jika perlu
+            var feedbacks: [String] = []
+            var hasError = false
+
             func convertPoint(_ point: VNRecognizedPoint) -> CGPoint {
                 return CGPoint(x: CGFloat(point.location.x), y: CGFloat(1 - point.location.y))
             }
-            
-            let shoulderPt = convertPoint(leftShoulder)
-            let elbowPt = convertPoint(leftElbow)
-            let wristPt = convertPoint(leftWrist)
-            
-            let angle = self.angleBetweenPoints(pointA: shoulderPt, pointB: elbowPt, pointC: wristPt)
-            
-            // Misal target angle siku antara 70-110 derajat dianggap pose bagus
-            if angle < 70 {
-                self.feedbackText = "Angkat siku lebih rendah"
-                self.overlayColor = .red
-            } else if angle > 110 {
-                self.feedbackText = "Turunkan siku lebih banyak"
-                self.overlayColor = .yellow
+
+            // --- Check Elbow (shooting arm, let's say right) ---
+            if let rightShoulder = points[.rightShoulder],
+               let rightElbow = points[.rightElbow],
+               let rightWrist = points[.rightWrist],
+               rightShoulder.confidence > 0.5,
+               rightElbow.confidence > 0.5,
+               rightWrist.confidence > 0.5 {
+
+                let angleElbow = self.angleBetweenPoints(
+                    pointA: convertPoint(rightShoulder),
+                    pointB: convertPoint(rightElbow),
+                    pointC: convertPoint(rightWrist)
+                )
+
+                if angleElbow < 90 {
+                    feedbacks.append("Siku terlalu sempit")
+                    hasError = true
+                    self.overlayColor = .red
+                } else if angleElbow > 110 {
+                    feedbacks.append("Siku terlalu terbuka")
+                    hasError = true
+                    self.overlayColor = .red
+                } else {
+                    feedbacks.append("Siku posisi bagus!")
+                    self.overlayColor = .green
+                }
             } else {
-                self.feedbackText = "Siku posisi bagus!"
-                self.overlayColor = .green
+                feedbacks.append("Pose siku tidak jelas")
+                hasError = true
             }
+
+            // --- Check Knee (shooting leg, right) ---
+            if let rightHip = points[.rightHip],
+               let rightKnee = points[.rightKnee],
+               let rightAnkle = points[.rightAnkle],
+               rightHip.confidence > 0.5,
+               rightKnee.confidence > 0.5,
+               rightAnkle.confidence > 0.5 {
+
+                let angleKnee = self.angleBetweenPoints(
+                    pointA: convertPoint(rightHip),
+                    pointB: convertPoint(rightKnee),
+                    pointC: convertPoint(rightAnkle)
+                )
+
+                if angleKnee < 100 {
+                    feedbacks.append("Tekuk lutut sedikit lebih dalam")
+                    hasError = true
+                } else if angleKnee > 150 {
+                    feedbacks.append("Lutut terlalu lurus, kurang lentur")
+                    hasError = true
+                } else {
+                    feedbacks.append("Lutut posisi bagus!")
+                }
+            } else {
+                feedbacks.append("Pose lutut tidak jelas")
+                hasError = true
+            }
+
+            // --- Check Body Balance ---
+            if let rightShoulder = points[.rightShoulder],
+               let rightHip = points[.rightHip],
+               let rightAnkle = points[.rightAnkle],
+               rightShoulder.confidence > 0.5,
+               rightHip.confidence > 0.5,
+               rightAnkle.confidence > 0.5 {
+
+                let verticalAlignment = abs(convertPoint(rightShoulder).x - convertPoint(rightHip).x) +
+                                        abs(convertPoint(rightHip).x - convertPoint(rightAnkle).x)
+
+                if verticalAlignment > 0.1 {
+                    feedbacks.append("Tubuh agak miring, perbaiki keseimbangan")
+                    hasError = true
+                } else {
+                    feedbacks.append("Keseimbangan tubuh bagus!")
+                }
+            } else {
+                feedbacks.append("Pose tubuh tidak jelas")
+                hasError = true
+            }
+
+            // Combine feedback
+            self.feedbackText = feedbacks.joined(separator: "\n")
+
+            // Set overlay color
+            self.overlayColor = hasError ? .red : .green
         }
-    }    
+    }
+
 }

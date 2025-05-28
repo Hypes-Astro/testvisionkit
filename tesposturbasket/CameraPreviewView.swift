@@ -51,6 +51,39 @@ struct CameraPreviewView: UIViewRepresentable {
             captureSession.commitConfiguration()
             captureSession.startRunning()
         }
+        
+        
+//        func setupCaptureSession(for previewView: PreviewView, viewModel: PoseDetectionViewModel) {
+//            guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front),
+//                  let input = try? AVCaptureDeviceInput(device: device) else { return }
+//
+//            captureSession.beginConfiguration()
+//            if captureSession.canAddInput(input) {
+//                captureSession.addInput(input)
+//            }
+//
+//            do {
+//                try device.lockForConfiguration()
+//                // Set frame rate to half → e.g., from 30 fps to 15 fps
+//                device.activeVideoMinFrameDuration = CMTimeMake(value: 1, timescale: 15)
+//                device.activeVideoMaxFrameDuration = CMTimeMake(value: 1, timescale: 15)
+//                device.unlockForConfiguration()
+//            } catch {
+//                print("Error locking configuration: \(error)")
+//            }
+//
+//            let videoOutput = AVCaptureVideoDataOutput()
+//            videoOutput.setSampleBufferDelegate(self, queue: DispatchQueue(label: "videoQueue"))
+//            if captureSession.canAddOutput(videoOutput) {
+//                captureSession.addOutput(videoOutput)
+//            }
+//
+//            previewView.videoPreviewLayer.session = captureSession
+//            previewView.videoPreviewLayer.videoGravity = .resizeAspectFill
+//            captureSession.commitConfiguration()
+//            captureSession.startRunning()
+//        }
+
 
         func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
             guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
