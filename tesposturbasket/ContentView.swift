@@ -10,6 +10,9 @@ struct ContentView: View {
                 PoseOverlayView(points: points, evaluationColor: viewModel.overlayColor)
             }
             VStack {
+                Text(viewModel.ballStatus)
+                    .foregroundColor(.blue)
+                    .padding()
                 Spacer()
                 Text(viewModel.feedbackText)
                     .padding()

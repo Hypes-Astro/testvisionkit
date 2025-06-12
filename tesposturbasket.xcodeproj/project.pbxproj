@@ -37,6 +37,20 @@
 			);
 			target = F83AC5A92DE49C590047A6FB /* tesposturbasket */;
 		};
+		F83AC6832DECC0A50047A6FB /* Exceptions for "tesposturbasket" folder in "tesposturbasketTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				hasilCheckBall.mlmodel,
+			);
+			target = F83AC5BB2DE49C5A0047A6FB /* tesposturbasketTests */;
+		};
+		F83AC6842DECC0A50047A6FB /* Exceptions for "tesposturbasket" folder in "tesposturbasketUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				hasilCheckBall.mlmodel,
+			);
+			target = F83AC5C52DE49C5A0047A6FB /* tesposturbasketUITests */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -44,6 +58,8 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				F83AC5E02DE49E130047A6FB /* Exceptions for "tesposturbasket" folder in "tesposturbasket" target */,
+				F83AC6832DECC0A50047A6FB /* Exceptions for "tesposturbasket" folder in "tesposturbasketTests" target */,
+				F83AC6842DECC0A50047A6FB /* Exceptions for "tesposturbasket" folder in "tesposturbasketUITests" target */,
 			);
 			path = tesposturbasket;
 			sourceTree = "<group>";
