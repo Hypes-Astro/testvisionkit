@@ -11,6 +11,9 @@ class PoseDetectionViewModel: NSObject, ObservableObject {
     @Published var currentPoints: [VNHumanBodyPoseObservation.JointName: VNRecognizedPoint]? = nil
     @Published var overlayColor: Color = .gray
     @Published var ballStatus: String = "Status bola belum terdeteksi"
+    @Published var savedBallImages: [UIImage] = []
+
+
 
     
     private let sequenceHandler = VNSequenceRequestHandler()
@@ -38,70 +41,10 @@ class PoseDetectionViewModel: NSObject, ObservableObject {
     }
     
     
-//    func processFrame(pixelBuffer: CVPixelBuffer) {
-//        let poseRequest = VNDetectHumanBodyPoseRequest { [weak self] request, error in
-//            guard let self = self else { return }
-//            guard let observations = request.results as? [VNHumanBodyPoseObservation],
-//                  let first = observations.first else {
-//                DispatchQueue.main.async {
-//                    self.feedbackText = "Tidak ada pose terdeteksi"
-//                    self.currentPoints = nil
-//                    self.overlayColor = .gray
-//                }
-//                return
-//            }
-//            
-//            do {
-//                let jointPoints = try first.recognizedPoints(.all)
-//                self.evaluatePose(points: jointPoints)
-//            } catch {
-//                print("Error evaluating pose: \(error)")
-//            }
-//        }
-//        
-//        // === Tambahan: Deteksi Bola Basket ===
-//        let config = MLModelConfiguration()
-//        guard let basketballModel = try? VNCoreMLModel(for: hasilCheckBall(configuration: config).model) else {
-//            print("Failed to load BasketballDetector model")
-//            return
-//        }
-//        
-//        let basketballRequest = VNCoreMLRequest(model: basketballModel) { [weak self] request, error in
-//            guard let self = self else { return }
-//            if let results = request.results as? [VNRecognizedObjectObservation] {
-//                var ballDetectedNearHand = false
-//                
-//                for result in results where result.labels.first?.identifier == "basketball" {
-//                    let boundingBox = result.boundingBox
-//                    let confidence = result.labels.first?.confidence ?? 0
-//                    
-//                    // --- Cek apakah bola dekat dengan tangan kanan ---
-//                    if let rightWrist = self.currentPoints?[.rightWrist], rightWrist.confidence > 0.5 {
-//                        let wristPoint = CGPoint(x: CGFloat(rightWrist.location.x), y: CGFloat(1 - rightWrist.location.y))
-//                        let ballRect = boundingBox
-//                        
-//                        // Bandingkan posisi wrist dengan posisi bola
-//                        if ballRect.contains(wristPoint) {
-//                            ballDetectedNearHand = true
-//                        }
-//                    }
-//                    
-//                    print("Basketball detected at \(boundingBox), confidence: \(confidence)")
-//                }
-//                
-//                DispatchQueue.main.async {
-//                    self.ballStatus = ballDetectedNearHand ? "Bola ada di tangan" : "Bola terlepas"
-//                }
-//            } else {
-//                DispatchQueue.main.async {
-//                    self.ballStatus = "Bola tidak terdeteksi"
-//                }
-//            }
-//        }
-//    }
 
     
     func processFrame(pixelBuffer: CVPixelBuffer) {
+        // === 1. Deteksi pose dulu ===
         let poseRequest = VNDetectHumanBodyPoseRequest { [weak self] request, error in
             guard let self = self else { return }
             guard let observations = request.results as? [VNHumanBodyPoseObservation],
@@ -110,47 +53,71 @@ class PoseDetectionViewModel: NSObject, ObservableObject {
                     self.feedbackText = "Tidak ada pose terdeteksi"
                     self.currentPoints = nil
                     self.overlayColor = .gray
+                    self.ballStatus = "Status bola belum terdeteksi"
                 }
                 return
             }
-            
+
             do {
                 let jointPoints = try first.recognizedPoints(.all)
-                self.evaluatePose(points: jointPoints)
+                DispatchQueue.main.async {
+                    self.currentPoints = jointPoints
+                    self.evaluatePose(points: jointPoints)
+                }
             } catch {
-                print("Error evaluating pose: \(error)")
+                print("❌ Error evaluating pose: \(error)")
             }
         }
 
-        // Request harus dijalankan
-        do {
-            try sequenceHandler.perform([poseRequest], on: pixelBuffer)
-        } catch {
-            print("Gagal memproses poseRequest: \(error)")
-        }
+        // Jalankan pose request
+        try? sequenceHandler.perform([poseRequest], on: pixelBuffer)
 
-        // Tambahan: Deteksi bola
+        // === 2. Deteksi bola dengan CoreML ===
         let config = MLModelConfiguration()
         guard let basketballModel = try? VNCoreMLModel(for: hasilCheckBall(configuration: config).model) else {
-            print("Failed to load BasketballDetector model")
+            print("❌ Gagal load model hasilCheckBall")
             return
         }
-        
+
         let basketballRequest = VNCoreMLRequest(model: basketballModel) { [weak self] request, error in
             guard let self = self else { return }
-            if let results = request.results as? [VNRecognizedObjectObservation] {
-                print("Jumlah objek terdeteksi: \(results.count)")
-                for result in results {
-                    print("Label: \(result.labels.first?.identifier ?? "unknown"), confidence: \(result.labels.first?.confidence ?? 0)")
-                    print("Bounding Box: \(result.boundingBox)")
+
+            if let results = request.results as? [VNRecognizedObjectObservation]    {
+                var ballDetectedNearHand = false
+
+                for result in results where result.labels.first?.identifier == "basketball" {
+                    let boundingBox = result.boundingBox
+                    let confidence = result.labels.first?.confidence ?? 0
+
+                    print("📦 Deteksi bola: boundingBox = \(boundingBox), confidence = \(confidence)")
+                    print("👀 currentPoints? \(self.currentPoints != nil)")
+
+                    // ⬇️ GANTI bagian ini:
+                    if let rightWrist = self.currentPoints?[.rightWrist], rightWrist.confidence > 0.5 {
+                        let wristPoint = CGPoint(
+                            x: CGFloat(rightWrist.location.x),
+                            y: CGFloat(rightWrist.location.y)
+                        )
+
+                        print("📍 wristPoint: \(wristPoint)")
+                        print("📦 boundingBox: \(boundingBox)")
+
+                        if boundingBox.contains(wristPoint) {
+                            print("✅ Bola dekat tangan (wrist di dalam bounding box)")
+                            ballDetectedNearHand = true
+                        }
+                    }
                 }
-            } else {
-                print("Tidak ada hasil deteksi bola.")
+
+                DispatchQueue.main.async {
+                    self.ballStatus = ballDetectedNearHand ? "Bola ada di tangan" : "Bola terlepas"
+                    print("🔄 ballStatus diubah ke: \(self.ballStatus)")
+                }
             }
         }
 
 
-        // Jalankan juga request untuk bola
+        // Jalankan deteksi bola
         let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, options: [:])
         try? handler.perform([basketballRequest])
     }
